@@ -11,9 +11,9 @@ test('terrain is deterministic per sector', () => {
   assert.deepEqual(a.objects, b.objects);
 });
 
-test('floor stays within 300..520 in every sector', () => {
+test('floor stays within 190..520 in every sector', () => {
   for (let i = 0; i < 8; i++) {
-    for (const y of buildTerrain(i).floor) assert.ok(y >= 300 && y <= 520, `sector ${i} y=${y}`);
+    for (const y of buildTerrain(i).floor) assert.ok(y >= 190 && y <= 520, `sector ${i} y=${y}`);
   }
 });
 
@@ -42,9 +42,21 @@ test('heightAt interpolates linearly between samples', () => {
   assert.equal(heightAt(arr, 10, 99), 200);
 });
 
-test('terrain is hilly: at least 150 px between lowest and highest point', () => {
+test('terrain is mountainous: open sectors have peaks of 240 px or more', () => {
   for (let i = 0; i < 8; i++) {
+    if (SECTORS[i].cave) continue;
     const f = buildTerrain(i).floor;
-    assert.ok(Math.max(...f) - Math.min(...f) >= 150, `sector ${i}`);
+    assert.ok(Math.max(...f) - Math.min(...f) >= 240, `sector ${i}: ${Math.max(...f) - Math.min(...f)}`);
+  }
+});
+
+test('mountains leave a 150 px flying corridor above every peak', () => {
+  for (let i = 0; i < 8; i++) for (const y of buildTerrain(i).floor) assert.ok(y >= 190);
+});
+
+test('UFOs and meteors start at least 120 px above the ground', () => {
+  for (let i = 0; i < 8; i++) {
+    const t = buildTerrain(i);
+    for (const o of t.objects) if (o.type === 'ufo' || o.type === 'meteor') assert.ok(o.y <= heightAt(t.floor, t.step, o.x) - 120, `sector ${i} ${o.type}`);
   }
 });

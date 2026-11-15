@@ -2,7 +2,7 @@ import { mulberry32 } from './rng.js';
 import { SECTORS } from './sectors.js';
 
 export const STEP = 16;
-const FLOOR_MIN = 300, FLOOR_MAX = 520, MIN_GAP = 140;
+const FLOOR_MIN = 190, FLOOR_MAX = 520, MIN_GAP = 140;
 
 export function heightAt(arr, step, x) {
   const f = Math.max(0, Math.min(arr.length - 1, x / step));
@@ -34,13 +34,19 @@ export function buildTerrain(sectorIndex) {
   const rand = mulberry32(0xC64 + sectorIndex * 7919);
   const n = Math.ceil(sec.length / STEP) + 2;
   const base = noise(rand, n, [90, 30, 9]);
+  const peaks = noise(rand, n, [55, 18]);
   const floor = new Float32Array(n);
   const ceil = sec.cave ? new Float32Array(n) : null;
   const ceilNoise = sec.cave ? noise(rand, n, [70, 22, 7]) : null;
   for (let i = 0; i < n; i++) {
     // Flat runway at both ends so the start and boss arena are fair.
     const edge = Math.min(1, i / 40, (n - 1 - i) / 40);
-    floor[i] = clamp(470 - edge * (base[i] * 190 + 70), FLOOR_MIN, FLOOR_MAX);
+    if (sec.cave) floor[i] = clamp(470 - edge * (base[i] * 190 + 70), 300, FLOOR_MAX);
+    else {
+      // Ridged noise gives sharp peaks and deep valleys.
+      const ridge = 1 - Math.abs(peaks[i]);
+      floor[i] = clamp(500 - edge * (ridge * ridge * 300 + base[i] * 50), FLOOR_MIN, FLOOR_MAX);
+    }
     if (ceil) {
       const c = 90 + edge * (ceilNoise[i] * 70 + 70);
       ceil[i] = Math.min(c, floor[i] - MIN_GAP);
@@ -65,7 +71,7 @@ export function buildTerrain(sectorIndex) {
     for (let k = 0; k < count; k++) {
       const x = 800 + rand() * (sec.length - 1800);
       if (ground.includes(type)) place(type, x);
-      else objects.push({ type, x, y: 80 + rand() * 220 });
+      else objects.push({ type, x, y: Math.max(50, Math.min(80 + rand() * 200, heightAt(floor, STEP, x) - 130)) });
     }
   }
   objects.sort((a, b) => a.x - b.x);

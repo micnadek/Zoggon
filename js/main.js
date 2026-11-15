@@ -103,7 +103,7 @@ function update(dt) {
   if (state.phase === 'sectorClear') {
     phaseTimer -= dt;
     world.ship.x += 500 * dt; world.camX += SCROLL_SPEED * dt;
-    if (Math.random() < 0.8) world.particles.trail(world.ship.x - 16, world.ship.y, '#ffa040');
+    if (Math.random() < 0.35) world.particles.trail(world.ship.x - 10, world.ship.y - 10, '#8899aa');
     if (phaseTimer <= 0) { world = buildWorld(); state.phase = 'intro'; phaseTimer = 2.2; }
     return;
   }
@@ -124,7 +124,7 @@ function update(dt) {
       s.vx *= 0.98; s.vy = Math.min(500, s.vy + GRAVITY * 0.5 * dt);
     }
     s.thrust = input.axis.x;
-    s.tilt = (s.tilt || 0) + ((s.vy / 300) * 0.25 - (s.tilt || 0)) * Math.min(1, dt * 10);
+    s.tilt = (s.tilt || 0) + ((s.vx / 300) * 0.22 + (s.vy / 300) * 0.06 - (s.tilt || 0)) * Math.min(1, dt * 8);
     s.x += s.vx * dt; s.y += s.vy * dt;
     s.x = Math.max(world.camX + 30, Math.min(world.camX + 620, s.x));
     s.y = Math.max(20, Math.min(530, s.y));
@@ -132,11 +132,11 @@ function update(dt) {
     s.fireCd -= dt; s.bombCd -= dt;
     if (state.phase === 'play') {
       if (state.fuel > 0) tickFuel(state, dt);
-      if (input.fire && s.fireCd <= 0) { world.bullets.push(makeBullet(s.x + 24, s.y + 2)); s.fireCd = 0.12; audio.sfx('shot'); }
+      if (input.fire && s.fireCd <= 0) { world.bullets.push(makeBullet(s.x + 28, s.y + 5)); s.fireCd = 0.12; audio.sfx('shot'); }
       if (input.bomb && s.bombCd <= 0) { world.bombs.push(makeBomb(s.x, s.y + 10, Math.max(150, SCROLL_SPEED + s.vx * 0.5))); s.bombCd = 0.45; audio.sfx('bomb'); }
       if (state.fuel < 20 && Math.floor(t * 2) !== Math.floor((t - dt) * 2)) audio.sfx('alarm');
     }
-    world.particles.trail(s.x - 16, s.y + (Math.random() - 0.5) * 4, '#ffa040');
+    if (Math.random() < 0.35) world.particles.trail(s.x - 10, s.y - 10, '#8899aa');
     if (hitsTerrain(s.x, s.y, s.r * 0.75, world.terrain)) killShip();
   }
 

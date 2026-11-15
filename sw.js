@@ -1,4 +1,4 @@
-const CACHE = 'zoggon2026-v2'; // podbij przy każdej nowej wersji
+const CACHE = 'zoggon2026-v3'; // podbij przy każdej nowej wersji
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png',
   './js/main.js', './js/audio.js', './js/render.js', './js/particles.js', './js/input.js', './js/state.js',
   './js/storage.js', './js/entities.js', './js/collide.js', './js/terrain.js', './js/sectors.js', './js/rng.js'];

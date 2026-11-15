@@ -131,29 +131,47 @@ export function renderWorld(ctx, world, state, input, t) {
 
 function drawShip(ctx, s, camX, t, state) {
   if (s.inv > 0 && Math.floor(t * 16) % 2) return;
-  const x = s.x - camX, y = s.y;
-  ctx.save(); ctx.translate(x, y); ctx.rotate(s.tilt || 0);
-  // Engine flame.
+  ctx.save(); ctx.translate(s.x - camX, s.y); ctx.rotate(s.tilt || 0); ctx.scale(1.25, 1.25);
+  // Tail boom.
+  ctx.fillStyle = '#3d5a80';
+  ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-40, -5); ctx.lineTo(-40, 0); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ff6bff'; ctx.fillRect(-38, -14, 4, 10); // tail fin
+  // Tail rotor (spinning disc).
   ctx.globalCompositeOperation = 'lighter';
-  const fl = 18 + Math.random() * 10 + Math.max(0, s.thrust || 0) * 14;
-  const fg = ctx.createLinearGradient(-14 - fl, 0, -12, 0);
-  fg.addColorStop(0, 'rgba(255,80,40,0)'); fg.addColorStop(0.6, 'rgba(255,170,60,0.8)'); fg.addColorStop(1, '#fff');
-  ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-12, -5); ctx.lineTo(-14 - fl, 0); ctx.lineTo(-12, 5); ctx.fill();
+  const tr = Math.abs(Math.sin(t * 40));
+  ctx.strokeStyle = 'rgba(200,240,255,0.7)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-41, -3 - 9 * tr); ctx.lineTo(-41, -3 + 9 * tr); ctx.stroke();
+  ctx.fillStyle = 'rgba(200,240,255,0.12)'; ctx.beginPath(); ctx.ellipse(-41, -3, 3, 9, 0, 0, 7); ctx.fill();
   ctx.globalCompositeOperation = 'source-over';
-  // Hull.
-  const hg = ctx.createLinearGradient(0, -12, 0, 12);
-  hg.addColorStop(0, '#e9f6ff'); hg.addColorStop(0.5, '#7aa8d8'); hg.addColorStop(1, '#25324f');
+  // Skids.
+  ctx.strokeStyle = '#9aa6c8'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-14, 15); ctx.lineTo(16, 15); ctx.quadraticCurveTo(21, 15, 22, 11); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-6, 9); ctx.lineTo(-8, 15); ctx.moveTo(8, 9); ctx.lineTo(10, 15); ctx.stroke();
+  // Body.
+  const hg = ctx.createLinearGradient(0, -12, 0, 11);
+  hg.addColorStop(0, '#e9f6ff'); hg.addColorStop(0.45, '#7aa8d8'); hg.addColorStop(1, '#25324f');
   ctx.fillStyle = hg;
   ctx.beginPath();
-  ctx.moveTo(26, 2); ctx.lineTo(6, -6); ctx.lineTo(-6, -16); ctx.lineTo(-14, -14); ctx.lineTo(-10, -5);
-  ctx.lineTo(-16, -4); ctx.lineTo(-16, 6); ctx.lineTo(-8, 8); ctx.lineTo(-12, 15); ctx.lineTo(-4, 15); ctx.lineTo(10, 7);
+  ctx.moveTo(-12, -8); ctx.quadraticCurveTo(-4, -13, 8, -12); ctx.quadraticCurveTo(22, -10, 24, 0);
+  ctx.quadraticCurveTo(23, 9, 12, 10); ctx.lineTo(-10, 10); ctx.quadraticCurveTo(-15, 2, -12, -8);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = '#7cf2ff'; ctx.lineWidth = 1.5; ctx.stroke();
-  // Cockpit.
-  ctx.fillStyle = '#7cf2ff'; ctx.beginPath(); ctx.ellipse(6, -2, 6, 3, -0.15, 0, 7); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.fillRect(4, -4, 3, 1.5);
-  // Fuel warning light.
-  if (state.fuel < 20 && Math.floor(t * 6) % 2) { ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.arc(-8, -11, 2.5, 0, 7); ctx.fill(); }
+  // Cockpit glass.
+  ctx.fillStyle = '#7cf2ff';
+  ctx.beginPath(); ctx.moveTo(8, -10); ctx.quadraticCurveTo(20, -9, 22, 0); ctx.lineTo(10, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(12, -8, 4, 1.5);
+  // Gun under the nose.
+  ctx.fillStyle = '#c0c8e0'; ctx.fillRect(18, 4, 10, 3);
+  // Rotor mast and main rotor (blur + blade).
+  ctx.fillStyle = '#9aa6c8'; ctx.fillRect(-2, -17, 4, 6);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = 'rgba(200,240,255,0.12)'; ctx.beginPath(); ctx.ellipse(0, -18, 38, 3, 0, 0, 7); ctx.fill();
+  const ph = (t * 9) % 1, bl = 38 * Math.cos(ph * Math.PI * 2);
+  ctx.strokeStyle = 'rgba(230,250,255,0.85)'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-bl, -18); ctx.lineTo(bl, -18); ctx.stroke();
+  ctx.globalCompositeOperation = 'source-over';
+  // Warning light.
+  if (state.fuel < 20 && Math.floor(t * 6) % 2) { ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.arc(-6, -10, 2.5, 0, 7); ctx.fill(); }
   ctx.restore();
 }
 
@@ -262,9 +280,11 @@ function drawHud(ctx, world, state, t, pal) {
   ctx.fillStyle = '#ffffffaa'; ctx.fillText('REKORD ' + String(Math.max(world.best, state.score)).padStart(7, '0'), 18, 38);
   // Lives.
   for (let i = 0; i < Math.min(state.lives, 8); i++) {
-    ctx.fillStyle = '#7cf2ff'; ctx.beginPath();
-    const x = W - 30 - i * 24, y = 24;
-    ctx.moveTo(x + 10, y); ctx.lineTo(x - 8, y - 7); ctx.lineTo(x - 5, y); ctx.lineTo(x - 8, y + 7); ctx.closePath(); ctx.fill();
+    const x = W - 30 - i * 28, y = 26;
+    ctx.fillStyle = '#7cf2ff';
+    ctx.beginPath(); ctx.ellipse(x + 2, y, 7, 5, 0, 0, 7); ctx.fill();
+    ctx.fillRect(x - 12, y - 2, 10, 2.5);
+    ctx.fillRect(x - 10, y - 9, 22, 1.5); ctx.fillRect(x + 1, y - 8, 1.5, 3);
   }
   // Fuel bar.
   const fx = 300, fy = 16, fw = 300, fh = 14;

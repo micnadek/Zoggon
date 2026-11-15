@@ -1,17 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b0630"/><stop offset="1" stop-color="#3a1260"/></linearGradient>
-    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset=".5" stop-color="#7aa8d8"/><stop offset="1" stop-color="#25324f"/></linearGradient>
-    <radialGradient id="glow"><stop offset="0" stop-color="#ffb060"/><stop offset="1" stop-color="#ff5020" stop-opacity="0"/></radialGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset=".45" stop-color="#7aa8d8"/><stop offset="1" stop-color="#25324f"/></linearGradient>
   </defs>
   <rect width="512" height="512" fill="url(#sky)"/>
-  <circle cx="380" cy="130" r="70" fill="#7cf2ff" opacity=".12"/>
-  <path d="M0 400 L60 360 L120 390 L190 320 L250 370 L320 330 L400 380 L460 340 L512 360 L512 512 L0 512Z" fill="#1a0f3a"/>
-  <path d="M0 400 L60 360 L120 390 L190 320 L250 370 L320 330 L400 380 L460 340 L512 360" fill="none" stroke="#7cf2ff" stroke-width="10" opacity=".35"/>
-  <path d="M0 400 L60 360 L120 390 L190 320 L250 370 L320 330 L400 380 L460 340 L512 360" fill="none" stroke="#dffcff" stroke-width="4"/>
-  <ellipse cx="130" cy="236" rx="80" ry="22" fill="url(#glow)"/>
-  <g transform="translate(260 236) scale(6)">
-    <path d="M26 2 L6 -6 L-6 -16 L-14 -14 L-10 -5 L-16 -4 L-16 6 L-8 8 L-12 15 L-4 15 L10 7Z" fill="url(#hull)" stroke="#7cf2ff" stroke-width="1"/>
-    <ellipse cx="6" cy="-2" rx="6" ry="3" fill="#7cf2ff"/>
+  <circle cx="390" cy="120" r="70" fill="#7cf2ff" opacity=".12"/>
+  <path d="M0 440 L70 380 L130 300 L190 390 L250 330 L330 250 L400 360 L460 320 L512 350 L512 512 L0 512Z" fill="#1a0f3a"/>
+  <path d="M0 440 L70 380 L130 300 L190 390 L250 330 L330 250 L400 360 L460 320 L512 350" fill="none" stroke="#7cf2ff" stroke-width="12" opacity=".3"/>
+  <path d="M0 440 L70 380 L130 300 L190 390 L250 330 L330 250 L400 360 L460 320 L512 350" fill="none" stroke="#dffcff" stroke-width="4"/>
+  <g transform="translate(270 210) scale(5.2)">
+    <path d="M-8 -6 L-40 -5 L-40 0 L-8 4Z" fill="#3d5a80"/>
+    <rect x="-38" y="-14" width="4" height="10" fill="#ff6bff"/>
+    <ellipse cx="-41" cy="-3" rx="2.5" ry="9" fill="#c8f0ff" opacity=".5"/>
+    <path d="M-14 15 L16 15 Q21 15 22 11 M-6 9 L-8 15 M8 9 L10 15" stroke="#9aa6c8" stroke-width="2" fill="none"/>
+    <path d="M-12 -8 Q-4 -13 8 -12 Q22 -10 24 0 Q23 9 12 10 L-10 10 Q-15 2 -12 -8Z" fill="url(#hull)" stroke="#7cf2ff" stroke-width="1.2"/>
+    <path d="M8 -10 Q20 -9 22 0 L10 0Z" fill="#7cf2ff"/>
+    <rect x="18" y="4" width="10" height="3" fill="#c0c8e0"/>
+    <rect x="-2" y="-17" width="4" height="6" fill="#9aa6c8"/>
+    <rect x="-38" y="-19.5" width="76" height="3" rx="1.5" fill="#e6faff"/>
   </g>
 </svg>
