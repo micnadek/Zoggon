@@ -40,7 +40,7 @@ export function buildTerrain(sectorIndex) {
   for (let i = 0; i < n; i++) {
     // Flat runway at both ends so the start and boss arena are fair.
     const edge = Math.min(1, i / 40, (n - 1 - i) / 40);
-    floor[i] = clamp(470 - edge * (base[i] * 110 + 60), FLOOR_MIN, FLOOR_MAX);
+    floor[i] = clamp(470 - edge * (base[i] * 190 + 70), FLOOR_MIN, FLOOR_MAX);
     if (ceil) {
       const c = 90 + edge * (ceilNoise[i] * 70 + 70);
       ceil[i] = Math.min(c, floor[i] - MIN_GAP);

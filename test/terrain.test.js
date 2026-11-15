@@ -41,3 +41,10 @@ test('heightAt interpolates linearly between samples', () => {
   assert.equal(heightAt(arr, 10, 0), 100);
   assert.equal(heightAt(arr, 10, 99), 200);
 });
+
+test('terrain is hilly: at least 150 px between lowest and highest point', () => {
+  for (let i = 0; i < 8; i++) {
+    const f = buildTerrain(i).floor;
+    assert.ok(Math.max(...f) - Math.min(...f) >= 150, `sector ${i}`);
+  }
+});

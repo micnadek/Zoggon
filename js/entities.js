@@ -21,7 +21,7 @@ export function makeEnemy(o) {
   if (o.type === 'laser') { e.on = false; e.timer = 1.2; }
   if (o.type === 'ufo') { e.baseY = o.y; e.phase = o.x % 6.28; }
   if (o.type === 'meteor') { e.vx = -120 - (o.x % 80); e.vy = 40 + (o.x % 50); e.spin = 0; }
-  if (o.type === 'boss') { e.maxHp = e.hp; e.cd = 1.5; e.baseY = 220; }
+  if (o.type === 'boss') { e.maxHp = e.hp; e.cd = 1.5; e.baseY = 200; }
   return e;
 }
 
@@ -51,7 +51,7 @@ export function updateEntity(e, dt, ship, spawn = () => {}) {
       break;
     case 'meteor': e.spin += dt * 3; break;
     case 'boss': {
-      e.y = e.baseY + Math.sin(e.t * 1.1) * 130;
+      e.y = e.baseY + Math.sin(e.t * 1.1) * 110;
       e.cd -= dt;
       if (e.cd <= 0) {
         const rage = e.hp < e.maxHp / 2;
