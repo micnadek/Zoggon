@@ -1,0 +1,1 @@
+{ "name": "zoggon-2026", "private": true, "type": "module", "scripts": { "test": "node --test" } }
