@@ -304,7 +304,7 @@ requestAnimationFrame(t0 => { last = t0; requestAnimationFrame(loop); });
 // Title screen scroll animation.
 setInterval(() => { if (state.phase === 'title' && world) world.camX = (world.camX + 2) % 12000; }, 16);
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 window.__zoggon = { state, get world() { return world; }, input, audioState: () => audio.state };

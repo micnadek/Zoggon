@@ -1,0 +1,43 @@
+plugins { id 'com.android.application' }
+
+def buildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+
+android {
+    namespace 'pl.micnadek.zoggon'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'pl.micnadek.zoggon'
+        minSdk 24
+        targetSdk 35
+        versionCode buildNumber
+        versionName "1.0.${buildNumber}"
+    }
+
+    // Klucz testowy (nie do Sklepu Play). Ten sam przy każdym buildzie,
+    // więc nowa wersja instaluje się na starą bez odinstalowywania.
+    signingConfigs {
+        zoggon {
+            storeFile file('zoggon-debug.keystore')
+            storePassword 'zoggondebug'
+            keyAlias 'zoggon'
+            keyPassword 'zoggondebug'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.zoggon
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
