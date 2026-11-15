@@ -1,10 +1,10 @@
 export const GRAVITY = 900;
 export const BULLET_SPEED = 900;
-const ROCKET_RANGE = 260;
+const ROCKET_RANGE = 380;
 
-export const POINTS = { tank: 150, rocket: 100, cannon: 200, ufo: 250, meteor: 120, laser: 300, boss: 5000 };
-const HP = { tank: 1, rocket: 1, cannon: 2, ufo: 1, meteor: 2, laser: 3, boss: 60 };
-const RADIUS = { tank: 16, rocket: 12, cannon: 16, ufo: 18, meteor: 20, laser: 14, boss: 70 };
+export const POINTS = { fighter: 200, tank: 150, rocket: 100, cannon: 200, ufo: 250, meteor: 120, laser: 300, boss: 5000 };
+const HP = { fighter: 1, tank: 1, rocket: 1, cannon: 2, ufo: 1, meteor: 2, laser: 3, boss: 60 };
+const RADIUS = { fighter: 14, tank: 16, rocket: 12, cannon: 16, ufo: 18, meteor: 20, laser: 14, boss: 70 };
 
 export function makeShip() {
   return { kind: 'ship', x: 160, y: 200, r: 14, vx: 0, vy: 0, fireCd: 0, bombCd: 0, inv: 0, alive: true };
@@ -31,7 +31,12 @@ export function updateEntity(e, dt, ship, spawn = () => {}) {
     case 'bomb': e.vy += GRAVITY * dt; break;
     case 'rocket':
       if (!e.launched && Math.abs(e.x - ship.x) < ROCKET_RANGE) e.launched = true;
-      if (e.launched) e.vy = Math.max(-420, e.vy - 700 * dt);
+      if (e.launched) {
+        e.vy = Math.max(-420, e.vy - 700 * dt);
+        // Steer toward the ship horizontally (limited turn rate).
+        const want = Math.max(-160, Math.min(160, (ship.x - e.x) * 1.2));
+        e.vx += Math.max(-300 * dt, Math.min(300 * dt, want - e.vx));
+      }
       break;
     case 'cannon':
       e.cd -= dt;
@@ -46,10 +51,15 @@ export function updateEntity(e, dt, ship, spawn = () => {}) {
       while (e.timer <= 0) { e.on = !e.on; e.timer += 1.2; }
       break;
     case 'ufo':
+      e.baseY += Math.max(-70 * dt, Math.min(70 * dt, ship.y - e.baseY));
       e.y = e.baseY + Math.sin(e.t * 2.4 + e.phase) * 60;
       e.vx = -60;
       break;
     case 'meteor': e.spin += dt * 3; break;
+    case 'fighter':
+      e.vx = -380;
+      e.vy = Math.max(-160, Math.min(160, (ship.y - e.y) * 2));
+      break;
     case 'boss': {
       e.y = e.baseY + Math.sin(e.t * 1.1) * 110;
       e.cd -= dt;

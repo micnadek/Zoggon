@@ -3,11 +3,11 @@ import { buildTerrain } from './terrain.js';
 import { circleHit, hitsTerrain } from './collide.js';
 import { makeShip, makeBullet, makeBomb, makeEnemy, updateEntity, POINTS, GRAVITY } from './entities.js';
 import { newGame, tickFuel, addFuel, addScore, loseLife, clearSector } from './state.js';
-import { loadBest, saveBest } from './storage.js';
+import { loadBest, saveBest, loadVehicle, saveVehicle, VEHICLES } from './storage.js';
 import { createInput } from './input.js';
 import { createParticles } from './particles.js';
 import { audio } from './audio.js';
-import { renderWorld, drawCenterText, W, H } from './render.js';
+import { renderWorld, drawCenterText, drawVehicle, drawButton, W, H } from './render.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d', { alpha: false });
@@ -30,7 +30,7 @@ resize();
 const input = createInput(canvas, { keyTarget: window, toLogical: (x, y) => ({ x: (x - offX) / scale, y: (y - offY) / scale }) });
 
 const state = newGame();
-let world = null, phaseTimer = 0, paused = false, t = 0, lastLifeSfx = 0;
+let world = null, phaseTimer = 0, paused = false, t = 0, lastLifeSfx = 0, vehicle = loadVehicle();
 const debugFps = new URLSearchParams(location.search).has('fps');
 let fps = 60;
 
@@ -44,6 +44,8 @@ function buildWorld() {
   };
   w.particles.clear();
   w.ship.inv = 2;
+  w.ship.vehicle = vehicle;
+  w.fighterTimer = 4;
   if (sec.boss) w.bossPending = true;
   return w;
 }
@@ -63,7 +65,7 @@ function explode(x, y, color, big = false) {
   audio.sfx(big ? 'big' : 'boom');
 }
 
-const ENEMY_COLOR = { tank: '#b6ff6a', rocket: '#ff7a40', cannon: '#ff4060', ufo: '#6dff9e', meteor: '#ffb547', laser: '#ff6bff', boss: '#ff4040' };
+const ENEMY_COLOR = { fighter: '#ff4060', tank: '#b6ff6a', rocket: '#ff7a40', cannon: '#ff4060', ufo: '#6dff9e', meteor: '#ffb547', laser: '#ff6bff', boss: '#ff4040' };
 
 function damage(e, amount) {
   e.hp -= amount; e.flash = 0.06;
@@ -148,6 +150,16 @@ function update(dt) {
     world.enemies.push(world.boss);
   }
 
+  // Fighters come from the right at the ship's altitude; camping high or far right brings them sooner.
+  if (state.phase === 'play' && s.alive && world.camX < end) {
+    const camping = s.y < 170 || s.x - world.camX > 480;
+    world.fighterTimer -= dt * (camping ? 3 : 1);
+    if (world.fighterTimer <= 0) {
+      world.fighterTimer = Math.max(3, 8 - state.sector * 0.6);
+      world.enemies.push(makeEnemy({ type: 'fighter', x: world.camX + W + 40, y: s.y }));
+    }
+  }
+
   const spawn = sh => world.shots.push(sh);
   for (const e of world.enemies) {
     updateEntity(e, dt, s, spawn);
@@ -155,6 +167,7 @@ function update(dt) {
     if (e.type === 'boss') e.x = world.camX + W - 130;
     if (e.x < world.camX - 150 || e.y < -80 || e.y > H + 80) e.alive = false;
     if (e.type === 'rocket' && e.launched && world.terrain.ceil && hitsTerrain(e.x, e.y - 14, 2, world.terrain)) { e.alive = false; explode(e.x, e.y, ENEMY_COLOR.rocket); }
+    if (e.type === 'fighter' && hitsTerrain(e.x, e.y, e.r * 0.6, world.terrain)) { e.alive = false; explode(e.x, e.y, ENEMY_COLOR.fighter); }
     if (e.type === 'meteor' && hitsTerrain(e.x, e.y, e.r * 0.6, world.terrain)) { e.alive = false; explode(e.x, e.y, ENEMY_COLOR.meteor); }
     if (!s.alive || s.inv > 0 || !e.alive) continue;
     if (e.type === 'laser') {
@@ -213,16 +226,57 @@ function stepProjectiles(dt) {
 }
 
 // ---------- Screens ----------
+const VEHICLE_NAMES = { heli: 'HELIKOPTER', plane: 'SAMOLOT', car: 'LATAJĄCE AUTO' };
+const titleCards = VEHICLES.map((v, i) => ({ v, x: W / 2 + (i - 1) * 230, y: 300, w: 200, h: 150 }));
+const startBtn = { x: W / 2, y: 452, w: 280, h: 58 };
+const pauseBtns = {
+  resume: { x: W / 2, y: 255, w: 320, h: 56 },
+  music: { x: W / 2, y: 325, w: 320, h: 56 },
+  menu: { x: W / 2, y: 395, w: 320, h: 56 },
+};
+const inRect = (b, p) => Math.abs(p.x - b.x) <= b.w / 2 && Math.abs(p.y - b.y) <= b.h / 2;
+const toLogical = e => ({ x: (e.clientX - offX) / scale, y: (e.clientY - offY) / scale });
+
 function drawTitle() {
   ctx.fillStyle = '#05030f'; ctx.fillRect(-offX / scale, -offY / scale, W + 2 * offX / scale, H + 2 * offY / scale);
   if (world) renderWorld(ctx, world, state, { touched: false, hideHud: true, buttons: input.buttons }, t);
-  drawCenterText(ctx, [
-    { text: 'ZOGGON', font: '900 84px "Courier New", monospace', color: '#7cf2ff', glow: '#7cf2ff', gap: 70 },
-    { text: '2 0 2 6', font: '700 26px "Courier New", monospace', color: '#ff6bff', glow: '#ff6bff', gap: 60 },
-    { text: 'REKORD ' + String(world ? world.best : 0).padStart(7, '0'), color: '#ffd048', gap: 56 },
-    { text: 'DOTKNIJ, ABY ZACZĄĆ', blink: true, gap: 44 },
-    { text: 'na podstawie gry Gundolfa Kiefera (C64, 1989)', font: '14px system-ui, sans-serif', color: '#ffffff88' },
-  ], t);
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#7cf2ff'; ctx.shadowBlur = 20;
+  ctx.font = '900 76px "Courier New", monospace'; ctx.fillStyle = '#7cf2ff'; ctx.fillText('ZOGGON', W / 2, 78);
+  ctx.shadowColor = '#ff6bff';
+  ctx.font = '700 24px "Courier New", monospace'; ctx.fillStyle = '#ff6bff'; ctx.fillText('2 0 2 6', W / 2, 128);
+  ctx.shadowBlur = 0;
+  ctx.font = '700 18px "Courier New", monospace'; ctx.fillStyle = '#ffd048';
+  ctx.fillText('REKORD ' + String(world ? world.best : 0).padStart(7, '0') + '   ·   WYBIERZ POJAZD', W / 2, 186);
+  for (const c of titleCards) {
+    const sel = c.v === vehicle;
+    ctx.fillStyle = sel ? 'rgba(124,242,255,0.18)' : 'rgba(10,10,30,0.65)';
+    ctx.strokeStyle = sel ? '#7cf2ff' : '#ffffff44'; ctx.lineWidth = sel ? 3 : 1.5;
+    ctx.beginPath(); ctx.roundRect(c.x - c.w / 2, c.y - c.h / 2, c.w, c.h, 14); ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.translate(c.x, c.y - 12 + Math.sin(t * 3 + c.x) * 3); ctx.scale(2, 2);
+    drawVehicle(ctx, c.v, t, sel ? 0.6 : 0);
+    ctx.restore();
+    ctx.font = '700 16px "Courier New", monospace'; ctx.fillStyle = sel ? '#ffffff' : '#ffffffaa';
+    ctx.fillText(VEHICLE_NAMES[c.v], c.x, c.y + 56);
+  }
+  drawButton(ctx, startBtn, '▶  START', '#6dff9e', Math.floor(t * 2) % 2 === 0);
+  ctx.font = '13px system-ui, sans-serif'; ctx.fillStyle = '#ffffff77';
+  ctx.fillText('na podstawie gry Gundolfa Kiefera (C64, 1989)', W / 2, 515);
+  ctx.restore();
+}
+
+function drawPauseMenu() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowColor = '#7cf2ff'; ctx.shadowBlur = 16;
+  ctx.font = '900 52px "Courier New", monospace'; ctx.fillStyle = '#fff'; ctx.fillText('PAUZA', W / 2, 165);
+  ctx.restore();
+  drawButton(ctx, pauseBtns.resume, '▶  GRAJ DALEJ', '#6dff9e');
+  drawButton(ctx, pauseBtns.music, '♪  MUZYKA: ' + (audio.musicOn ? 'WŁ.' : 'WYŁ.'), '#ffd048');
+  drawButton(ctx, pauseBtns.menu, '⌂  MENU', '#ff6bff');
 }
 
 function frame() {
@@ -238,10 +292,10 @@ function frame() {
   const sec = SECTORS[state.sector];
   if (state.phase === 'intro') drawCenterText(ctx, [{ text: `SEKTOR ${state.sector + 1}`, font: '900 44px "Courier New", monospace', color: sec.palette.glow, glow: sec.palette.glow, gap: 56 }, { text: sec.name }, ...(sec.boss ? [{ text: 'NA KOŃCU CZEKA ZOGGON', color: '#ff4040' }] : [])], t);
   if (state.phase === 'sectorClear') drawCenterText(ctx, [{ text: 'SEKTOR ZALICZONY', font: '900 40px "Courier New", monospace', color: '#6dff9e', glow: '#6dff9e', gap: 56 }, { text: 'BONUS ZA PALIWO' }], t);
-  if (state.phase === 'over' && phaseTimer < 0.8) drawCenterText(ctx, [{ text: 'KONIEC GRY', font: '900 52px "Courier New", monospace', color: '#ff4060', glow: '#ff4060', gap: 64 }, { text: 'WYNIK ' + state.score, gap: 50 }, { text: 'DOTKNIJ, ABY ZAGRAĆ PONOWNIE', blink: true }], t);
-  if (state.phase === 'win') drawCenterText(ctx, [{ text: 'ZOGGON POKONANY!', font: '900 46px "Courier New", monospace', color: '#ffd048', glow: '#ffd048', gap: 60 }, { text: 'WYNIK ' + state.score, gap: 50 }, { text: 'DOTKNIJ, ABY ZAGRAĆ PONOWNIE', blink: true }], t);
+  if (state.phase === 'over' && phaseTimer < 0.8) drawCenterText(ctx, [{ text: 'KONIEC GRY', font: '900 52px "Courier New", monospace', color: '#ff4060', glow: '#ff4060', gap: 64 }, { text: 'WYNIK ' + state.score, gap: 50 }, { text: 'DOTKNIJ, ABY WRÓCIĆ DO MENU', blink: true }], t);
+  if (state.phase === 'win') drawCenterText(ctx, [{ text: 'ZOGGON POKONANY!', font: '900 46px "Courier New", monospace', color: '#ffd048', glow: '#ffd048', gap: 60 }, { text: 'WYNIK ' + state.score, gap: 50 }, { text: 'DOTKNIJ, ABY WRÓCIĆ DO MENU', blink: true }], t);
   if (lastLifeSfx > 0) { ctx.fillStyle = '#6dff9e'; ctx.font = '700 22px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.fillText('+1 ŻYCIE', W / 2, 120); }
-  if (paused) drawCenterText(ctx, [{ text: 'PAUZA', font: '900 52px "Courier New", monospace', glow: '#7cf2ff', gap: 64 }, { text: 'DOTKNIJ, ABY GRAĆ DALEJ', blink: true, gap: 44 }, { text: '♪ MUZYKA: ' + (audio.musicOn ? 'WŁ.' : 'WYŁ.') + '  (dotknij tutaj lub M)', font: '600 17px system-ui', color: '#ffd048' }], t);
+  if (paused) drawPauseMenu();
   if (debugFps) { ctx.fillStyle = '#0f0'; ctx.font = '12px monospace'; ctx.textAlign = 'left'; ctx.fillText(fps.toFixed(0) + ' fps', 8, H - 16); }
   ctx.restore();
 }
@@ -270,6 +324,17 @@ function setPaused(p) {
   p ? audio.suspend() : audio.resume();
 }
 
+function goToTitle() {
+  setPaused(false);
+  audio.stopMusic();
+  Object.assign(state, newGame());
+  world = buildWorld();
+  world.best = loadBest();
+}
+
+function chooseVehicle(v) { vehicle = v; saveVehicle(v); if (world) world.ship.vehicle = v; }
+const canReturn = () => (state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997);
+
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { if (world && ['play', 'intro'].includes(state.phase)) setPaused(true); else audio.suspend(); }
   else if (!paused) audio.resume();
@@ -279,22 +344,37 @@ const unlockAudio = () => audio.unlock(!paused && !portrait);
 canvas.addEventListener('pointerup', unlockAudio);
 canvas.addEventListener('pointerdown', e => {
   if (portrait) { unlockAudio(); return; }
-  if (state.phase === 'title') { audio.unlock(true); startGame(); return; }
+  const p = toLogical(e);
+  if (state.phase === 'title') {
+    audio.unlock(true);
+    const card = titleCards.find(c => inRect(c, p));
+    if (card) { chooseVehicle(card.v); return; }
+    if (inRect(startBtn, p)) { input.reset(); startGame(); }
+    return;
+  }
   unlockAudio();
   if (paused) {
     input.consumePause();
-    const y = (e.clientY - offY) / scale;
-    if (y > H / 2 + 70) audio.toggleMusic(); else setPaused(false);
+    if (inRect(pauseBtns.music, p)) audio.toggleMusic();
+    else if (inRect(pauseBtns.menu, p)) goToTitle();
+    else if (inRect(pauseBtns.resume, p) || Math.hypot(p.x - input.buttons.pause.x, p.y - input.buttons.pause.y) < input.buttons.pause.r * 1.25) setPaused(false);
     return;
   }
-  if ((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) { state.phase = 'title'; world.best = loadBest(); audio.stopMusic(); }
+  if (canReturn()) goToTitle();
 });
 window.addEventListener('keydown', e => {
   unlockAudio();
   if (e.code === 'KeyM') audio.toggleMusic();
-  if (state.phase === 'title' && (e.code === 'Space' || e.code === 'Enter')) { startGame(); return; }
+  if (state.phase === 'title') {
+    const i = VEHICLES.indexOf(vehicle);
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') chooseVehicle(VEHICLES[(i + 2) % 3]);
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') chooseVehicle(VEHICLES[(i + 1) % 3]);
+    if (e.code === 'Space' || e.code === 'Enter') { input.reset(); startGame(); }
+    return;
+  }
   if (paused && (e.code === 'Space' || e.code === 'Enter')) { input.consumePause(); setPaused(false); }
-  if (((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) && e.code === 'Enter') { state.phase = 'title'; world.best = loadBest(); audio.stopMusic(); }
+  if (paused && e.code === 'KeyQ') goToTitle();
+  if (canReturn() && (e.code === 'Enter' || e.code === 'Space')) goToTitle();
 });
 
 // Title backdrop: an idle sector 1 scrolling behind the logo.
@@ -307,4 +387,9 @@ setInterval(() => { if (state.phase === 'title' && world) world.camX = (world.ca
 if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'appassets.androidplatform.net') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-window.__zoggon = { state, get world() { return world; }, input, audioState: () => audio.state };
+window.__zoggon = {
+  state, get world() { return world; }, input, audioState: () => audio.state,
+  get paused() { return paused; },
+  // Test hook: advance the simulation instantly by `seconds`.
+  step(seconds) { for (let i = 0; i < Math.round(seconds / STEP); i++) update(STEP); },
+};

@@ -31,12 +31,8 @@ test('bullet flies 900 px/s to the right', () => {
   assert.equal(b.x, 450);
 });
 
-test('rocket launches only when ship is within 260 px horizontally', () => {
+test('launched rocket climbs', () => {
   const r = makeEnemy({ type: 'rocket', x: 1000, y: 400 });
-  updateEntity(r, 1 / 60, { x: 700, y: 200 });
-  assert.equal(r.launched, false);
-  updateEntity(r, 1 / 60, { x: 750, y: 200 });
-  assert.equal(r.launched, true);
   for (let i = 0; i < 30; i++) updateEntity(r, 1 / 60, { x: 750, y: 200 });
   assert.ok(r.y < 400);
 });
@@ -46,4 +42,31 @@ test('laser toggles every 1.2 s', () => {
   const on0 = l.on;
   updateEntity(l, 1.25, { x: 0, y: 0 });
   assert.equal(l.on, !on0);
+});
+
+test('rocket launches when ship is within 380 px horizontally', () => {
+  const r = makeEnemy({ type: 'rocket', x: 1000, y: 400 });
+  updateEntity(r, 1 / 60, { x: 600, y: 50 });
+  assert.equal(r.launched, false);
+  updateEntity(r, 1 / 60, { x: 630, y: 50 });
+  assert.equal(r.launched, true);
+});
+
+test('launched rocket steers horizontally toward the ship', () => {
+  const r = makeEnemy({ type: 'rocket', x: 1000, y: 400 });
+  for (let i = 0; i < 60; i++) updateEntity(r, 1 / 60, { x: 800, y: 50 });
+  assert.ok(r.x < 1000, `x=${r.x}`);
+});
+
+test('ufo drifts toward the ship altitude', () => {
+  const u = makeEnemy({ type: 'ufo', x: 1000, y: 250 });
+  for (let i = 0; i < 180; i++) updateEntity(u, 1 / 60, { x: 700, y: 40 });
+  assert.ok(u.baseY < 150, `baseY=${u.baseY}`);
+});
+
+test('fighter flies left fast and follows ship altitude', () => {
+  const f = makeEnemy({ type: 'fighter', x: 1000, y: 300 });
+  for (let i = 0; i < 30; i++) updateEntity(f, 1 / 60, { x: 600, y: 40 });
+  assert.ok(f.x < 900);
+  assert.ok(f.y < 300);
 });

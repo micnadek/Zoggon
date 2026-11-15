@@ -81,16 +81,22 @@ export function renderWorld(ctx, world, state, input, t) {
   ridge(ctx, camX, 0.15, 360, 70, pal.glow + '14', 1);
   ridge(ctx, camX, 0.35, 420, 60, pal.ground + 'aa', 4);
 
-  // Ground.
-  ctx.fillStyle = cachedGradient(ctx, 'g' + state.sector, 300, H, pal.ground, '#000');
+  // Ground: solid brown earth with rock strata.
+  ctx.fillStyle = cachedGradient(ctx, 'earth', 200, H, '#9a6235', '#3a2210');
   terrainPath(ctx, terr.floor, terr.step, camX, H + 10); ctx.fill();
-  terrainEdge(ctx, terr.floor, terr.step, camX, 14); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
-  terrainEdge(ctx, terr.floor, terr.step, camX); glowStroke(ctx, pal.glow, 2);
+  for (const [dy, c] of [[18, '#6e4220'], [46, '#5a3418'], [80, '#4a2a12']]) {
+    terrainEdge(ctx, terr.floor, terr.step, camX, dy); ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.stroke();
+  }
+  terrainEdge(ctx, terr.floor, terr.step, camX); ctx.strokeStyle = '#c98a52'; ctx.lineWidth = 4; ctx.stroke();
+  terrainEdge(ctx, terr.floor, terr.step, camX, -1); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
   if (terr.ceil) {
-    ctx.fillStyle = cachedGradient(ctx, 'c' + state.sector, 0, 260, '#000', pal.ground);
+    ctx.fillStyle = cachedGradient(ctx, 'rock', 0, 300, '#3a2210', '#8a5630');
     terrainPath(ctx, terr.ceil, terr.step, camX, -10); ctx.fill();
-    terrainEdge(ctx, terr.ceil, terr.step, camX, -14); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
-    terrainEdge(ctx, terr.ceil, terr.step, camX); glowStroke(ctx, pal.glow, 2);
+    for (const [dy, c] of [[-18, '#6e4220'], [-46, '#5a3418']]) {
+      terrainEdge(ctx, terr.ceil, terr.step, camX, dy); ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.stroke();
+    }
+    terrainEdge(ctx, terr.ceil, terr.step, camX); ctx.strokeStyle = '#c98a52'; ctx.lineWidth = 4; ctx.stroke();
+    terrainEdge(ctx, terr.ceil, terr.step, camX, 1); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.5; ctx.stroke(); ctx.globalAlpha = 1;
   }
 
   for (const e of world.enemies) drawEnemy(ctx, e, camX, world, t, pal);
@@ -121,17 +127,29 @@ export function renderWorld(ctx, world, state, input, t) {
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 
-  if (world.ship.alive) drawShip(ctx, world.ship, camX, t, state);
+  if (world.ship.alive && !input.hideHud) drawShip(ctx, world.ship, camX, t, state);
 
   ctx.restore();
   if (world.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${Math.min(0.6, world.flash)})`; ctx.fillRect(0, 0, W, H); }
-  if (!input.hideHud) drawHud(ctx, world, state, t, pal);
+  if (!input.hideHud) { drawHud(ctx, world, state, t, pal); drawPauseButton(ctx, input.buttons.pause); }
   if (input.touched) drawControls(ctx, input);
 }
 
 function drawShip(ctx, s, camX, t, state) {
   if (s.inv > 0 && Math.floor(t * 16) % 2) return;
   ctx.save(); ctx.translate(s.x - camX, s.y); ctx.rotate(s.tilt || 0); ctx.scale(1.25, 1.25);
+  drawVehicle(ctx, s.vehicle || 'heli', t, s.thrust || 0);
+  if (state.fuel < 20 && Math.floor(t * 6) % 2) { ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.arc(-6, -12, 2.5, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+
+export function drawVehicle(ctx, kind, t, thrust = 0) {
+  if (kind === 'plane') return drawPlane(ctx, t, thrust);
+  if (kind === 'car') return drawCar(ctx, t, thrust);
+  drawHeli(ctx, t);
+}
+
+function drawHeli(ctx, t) {
   // Tail boom.
   ctx.fillStyle = '#3d5a80';
   ctx.beginPath(); ctx.moveTo(-8, -6); ctx.lineTo(-40, -5); ctx.lineTo(-40, 0); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fill();
@@ -170,9 +188,62 @@ function drawShip(ctx, s, camX, t, state) {
   ctx.strokeStyle = 'rgba(230,250,255,0.85)'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(-bl, -18); ctx.lineTo(bl, -18); ctx.stroke();
   ctx.globalCompositeOperation = 'source-over';
-  // Warning light.
-  if (state.fuel < 20 && Math.floor(t * 6) % 2) { ctx.fillStyle = '#ff3040'; ctx.beginPath(); ctx.arc(-6, -10, 2.5, 0, 7); ctx.fill(); }
-  ctx.restore();
+}
+
+function drawPlane(ctx, t, thrust) {
+  ctx.globalCompositeOperation = 'lighter';
+  const fl = 18 + Math.random() * 10 + Math.max(0, thrust) * 14;
+  const fg = ctx.createLinearGradient(-14 - fl, 0, -12, 0);
+  fg.addColorStop(0, 'rgba(255,80,40,0)'); fg.addColorStop(0.6, 'rgba(255,170,60,0.8)'); fg.addColorStop(1, '#fff');
+  ctx.fillStyle = fg; ctx.beginPath(); ctx.moveTo(-12, -5); ctx.lineTo(-14 - fl, 0); ctx.lineTo(-12, 5); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  const hg = ctx.createLinearGradient(0, -12, 0, 12);
+  hg.addColorStop(0, '#e9f6ff'); hg.addColorStop(0.5, '#7aa8d8'); hg.addColorStop(1, '#25324f');
+  ctx.fillStyle = hg;
+  ctx.beginPath();
+  ctx.moveTo(26, 2); ctx.lineTo(6, -6); ctx.lineTo(-6, -16); ctx.lineTo(-14, -14); ctx.lineTo(-10, -5);
+  ctx.lineTo(-16, -4); ctx.lineTo(-16, 6); ctx.lineTo(-8, 8); ctx.lineTo(-12, 15); ctx.lineTo(-4, 15); ctx.lineTo(10, 7);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#7cf2ff'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.fillStyle = '#7cf2ff'; ctx.beginPath(); ctx.ellipse(6, -2, 6, 3, -0.15, 0, 7); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillRect(4, -4, 3, 1.5);
+}
+
+function drawCar(ctx, t, thrust) {
+  // Hover thrusters under the wheels.
+  ctx.globalCompositeOperation = 'lighter';
+  for (const wx of [-14, 15]) {
+    const h = 10 + Math.random() * 6 + Math.max(0, thrust) * 4;
+    const g = ctx.createLinearGradient(0, 8, 0, 8 + h);
+    g.addColorStop(0, 'rgba(120,220,255,0.9)'); g.addColorStop(1, 'rgba(60,120,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(wx - 5, 9); ctx.lineTo(wx, 9 + h); ctx.lineTo(wx + 5, 9); ctx.fill();
+  }
+  // Headlight beam.
+  ctx.fillStyle = 'rgba(255,255,220,0.10)'; ctx.beginPath(); ctx.moveTo(27, -1); ctx.lineTo(70, -10); ctx.lineTo(70, 10); ctx.closePath(); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  // Body: low, smooth electric sedan.
+  const bg = ctx.createLinearGradient(0, -12, 0, 8);
+  bg.addColorStop(0, '#ff6a6a'); bg.addColorStop(0.5, '#d8202a'); bg.addColorStop(1, '#6a0a12');
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.moveTo(-26, 2); ctx.quadraticCurveTo(-27, -5, -20, -6);
+  ctx.quadraticCurveTo(-10, -15, 2, -15); ctx.quadraticCurveTo(12, -14, 17, -6);
+  ctx.quadraticCurveTo(26, -5, 28, 0); ctx.lineTo(27, 4); ctx.lineTo(-25, 5); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ffb0b0'; ctx.lineWidth = 1; ctx.stroke();
+  // Glass roof.
+  ctx.fillStyle = '#1a2a3a';
+  ctx.beginPath(); ctx.moveTo(-15, -7); ctx.quadraticCurveTo(-8, -13, 2, -13); ctx.quadraticCurveTo(10, -12, 14, -7); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(160,220,255,0.55)'; ctx.fillRect(-4, -12, 6, 1.5);
+  ctx.strokeStyle = '#d8202a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-1, -13); ctx.lineTo(-1, -7); ctx.stroke();
+  // Wheels turned flat for flight.
+  ctx.fillStyle = '#20232c';
+  ctx.beginPath(); ctx.ellipse(-14, 6, 7, 3, 0, 0, 7); ctx.ellipse(15, 6, 7, 3, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#8fd8ff'; ctx.fillRect(-16, 5, 4, 1.5); ctx.fillRect(13, 5, 4, 1.5);
+  // Lights.
+  ctx.fillStyle = '#fffbe0'; ctx.fillRect(24, -3, 4, 2.5);
+  ctx.fillStyle = '#ff2030'; ctx.fillRect(-27, -3, 3, 3);
+  // Gun.
+  ctx.fillStyle = '#c0c8e0'; ctx.fillRect(20, 3, 9, 2.5);
 }
 
 function drawEnemy(ctx, e, camX, world, t, pal) {
@@ -248,6 +319,14 @@ function drawEnemy(ctx, e, camX, world, t, pal) {
       }
       break;
     }
+    case 'fighter': {
+      if (Math.random() < 0.7) world.particles.trail(e.x + 18, e.y, '#ff6040');
+      ctx.fillStyle = '#ff4060';
+      ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(4, -6); ctx.lineTo(14, -16); ctx.lineTo(18, -4); ctx.lineTo(18, 4); ctx.lineTo(14, 16); ctx.lineTo(4, 6); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#ffc0c8'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = '#ffe080'; ctx.beginPath(); ctx.ellipse(-4, 0, 5, 2.5, 0, 0, 7); ctx.fill();
+      break;
+    }
     case 'boss': drawBoss(ctx, e, t); break;
   }
   ctx.restore();
@@ -280,11 +359,9 @@ function drawHud(ctx, world, state, t, pal) {
   ctx.fillStyle = '#ffffffaa'; ctx.fillText('REKORD ' + String(Math.max(world.best, state.score)).padStart(7, '0'), 18, 38);
   // Lives.
   for (let i = 0; i < Math.min(state.lives, 8); i++) {
-    const x = W - 30 - i * 28, y = 26;
-    ctx.fillStyle = '#7cf2ff';
-    ctx.beginPath(); ctx.ellipse(x + 2, y, 7, 5, 0, 0, 7); ctx.fill();
-    ctx.fillRect(x - 12, y - 2, 10, 2.5);
-    ctx.fillRect(x - 10, y - 9, 22, 1.5); ctx.fillRect(x + 1, y - 8, 1.5, 3);
+    ctx.save(); ctx.translate(W - 34 - i * 34, 26); ctx.scale(0.55, 0.55);
+    drawVehicle(ctx, world.ship.vehicle || 'heli', 0, 0);
+    ctx.restore();
   }
   // Fuel bar.
   const fx = 300, fy = 16, fw = 300, fh = 14;
@@ -307,6 +384,24 @@ function drawHud(ctx, world, state, t, pal) {
   }
 }
 
+function drawPauseButton(ctx, p) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(10,10,30,0.55)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#ffffffcc'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(p.x - 8, p.y - 10, 6, 20); ctx.fillRect(p.x + 2, p.y - 10, 6, 20);
+  ctx.restore();
+}
+
+export function drawButton(ctx, b, label, color, active = false) {
+  ctx.save();
+  ctx.fillStyle = active ? color + '55' : 'rgba(10,10,30,0.7)';
+  ctx.strokeStyle = color; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, 12); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = '700 20px "Courier New", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, b.x, b.y + 1);
+  ctx.restore();
+}
+
 function drawControls(ctx, input) {
   const b = input.buttons;
   ctx.save();
@@ -319,8 +414,6 @@ function drawControls(ctx, input) {
   };
   btn(b.fire, 'OGIEŃ', input.fire, '#7cf2ff');
   btn(b.bomb, 'BOMBA', input.bomb, '#ffd048');
-  // Pause.
-  ctx.fillStyle = '#ffffff33'; ctx.fillRect(b.pause.x - 8, b.pause.y - 10, 5, 20); ctx.fillRect(b.pause.x + 3, b.pause.y - 10, 5, 20);
   if (input.stick) {
     const o = input.stick.origin, p = input.stick.pos;
     ctx.strokeStyle = '#ffffff55'; ctx.beginPath(); ctx.arc(o.x, o.y, 70, 0, 7); ctx.stroke();

@@ -20,7 +20,7 @@ export function createInput(target, { keyTarget = globalThis.window, toLogical }
       this.width = w; this.height = h;
       this.buttons.fire = { x: w - 105, y: h - 105, r: 68 };
       this.buttons.bomb = { x: w - 245, y: h - 70, r: 50 };
-      this.buttons.pause = { x: w / 2, y: 30, r: 26 };
+      this.buttons.pause = { x: w - 42, y: 78, r: 28 };
     },
     consumePause() { const p = this.pausePressed; this.pausePressed = false; return p; },
   };

@@ -46,3 +46,14 @@ test('best score survives missing localStorage', () => {
   assert.equal(loadBest(), 2000);
   globalThis.localStorage = saved;
 });
+
+test('vehicle choice is remembered and defaults to helicopter', async () => {
+  const { loadVehicle, saveVehicle, VEHICLES } = await import('../js/storage.js');
+  assert.deepEqual(VEHICLES, ['heli', 'plane', 'car']);
+  globalThis.localStorage = undefined;
+  assert.equal(loadVehicle(), 'heli');
+  saveVehicle('car');
+  assert.equal(loadVehicle(), 'car');
+  saveVehicle('ufo');
+  assert.equal(loadVehicle(), 'car');
+});
