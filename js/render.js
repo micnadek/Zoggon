@@ -34,6 +34,13 @@ function ridge(ctx, camX, factor, base, amp, color, seed) {
   ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
 }
 
+const gradCache = new Map();
+function cachedGradient(ctx, key, y0, y1, c0, c1) {
+  let g = gradCache.get(key);
+  if (!g) { g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); gradCache.set(key, g); }
+  return g;
+}
+
 function terrainPath(ctx, arr, step, camX, close) {
   const i0 = Math.max(0, Math.floor(camX / step) - 1), i1 = Math.min(arr.length - 1, Math.ceil((camX + W) / step) + 1);
   ctx.beginPath();
@@ -75,16 +82,12 @@ export function renderWorld(ctx, world, state, input, t) {
   ridge(ctx, camX, 0.35, 420, 60, pal.ground + 'aa', 4);
 
   // Ground.
-  const gg = ctx.createLinearGradient(0, 300, 0, H);
-  gg.addColorStop(0, pal.ground); gg.addColorStop(1, '#000');
-  ctx.fillStyle = gg;
+  ctx.fillStyle = cachedGradient(ctx, 'g' + state.sector, 300, H, pal.ground, '#000');
   terrainPath(ctx, terr.floor, terr.step, camX, H + 10); ctx.fill();
   terrainEdge(ctx, terr.floor, terr.step, camX, 14); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
   terrainEdge(ctx, terr.floor, terr.step, camX); glowStroke(ctx, pal.glow, 2);
   if (terr.ceil) {
-    const cg = ctx.createLinearGradient(0, 0, 0, 260);
-    cg.addColorStop(0, '#000'); cg.addColorStop(1, pal.ground);
-    ctx.fillStyle = cg;
+    ctx.fillStyle = cachedGradient(ctx, 'c' + state.sector, 0, 260, '#000', pal.ground);
     terrainPath(ctx, terr.ceil, terr.step, camX, -10); ctx.fill();
     terrainEdge(ctx, terr.ceil, terr.step, camX, -14); ctx.strokeStyle = pal.glow; ctx.globalAlpha = 0.18; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
     terrainEdge(ctx, terr.ceil, terr.step, camX); glowStroke(ctx, pal.glow, 2);

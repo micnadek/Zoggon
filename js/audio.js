@@ -17,7 +17,9 @@ const LEAD = [
 const DRUM = [1, 0, 3, 0, 2, 0, 3, 1, 1, 0, 3, 0, 2, 0, 3, 3]; // 1 kick, 2 snare, 3 hat
 
 export const audio = {
-  unlock() {
+  get state() { return ctx ? ctx.state : 'none'; },
+  // Creates the AudioContext on a user gesture; resumes it only when allowed.
+  unlock(resume = true) {
     try {
       if (!ctx) {
         const AC = globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -30,7 +32,8 @@ export const audio = {
         const d = noiseBuf.getChannelData(0);
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       }
-      if (ctx.state === 'suspended') ctx.resume();
+      if (resume && ctx.state === 'suspended') ctx.resume();
+      else if (!resume && ctx.state === 'running') ctx.suspend();
     } catch { ctx = null; }
   },
   suspend() { try { ctx?.suspend(); } catch { /* ignore */ } },

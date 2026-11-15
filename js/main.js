@@ -70,6 +70,7 @@ function damage(e, amount) {
   if (e.hp > 0) { audio.sfx('hit'); return; }
   e.alive = false;
   explode(e.x, e.y, ENEMY_COLOR[e.type], e.type === 'boss');
+  if (e.type === 'boss') world.shots = [];
   if (e.type === 'tank') { addFuel(state); audio.sfx('fuel'); }
   const lives = addScore(state, POINTS[e.type]);
   if (lives) { audio.sfx('life'); lastLifeSfx = 1.5; }
@@ -218,7 +219,7 @@ function drawTitle() {
   drawCenterText(ctx, [
     { text: 'ZOGGON', font: '900 84px "Courier New", monospace', color: '#7cf2ff', glow: '#7cf2ff', gap: 70 },
     { text: '2 0 2 6', font: '700 26px "Courier New", monospace', color: '#ff6bff', glow: '#ff6bff', gap: 60 },
-    { text: 'REKORD ' + String(loadBest()).padStart(7, '0'), color: '#ffd048', gap: 56 },
+    { text: 'REKORD ' + String(world ? world.best : 0).padStart(7, '0'), color: '#ffd048', gap: 56 },
     { text: 'DOTKNIJ, ABY ZACZĄĆ', blink: true, gap: 44 },
     { text: 'na podstawie gry Gundolfa Kiefera (C64, 1989)', font: '14px system-ui, sans-serif', color: '#ffffff88' },
   ], t);
@@ -274,23 +275,26 @@ document.addEventListener('visibilitychange', () => {
   else if (!paused) audio.resume();
 });
 
+const unlockAudio = () => audio.unlock(!paused && !portrait);
+canvas.addEventListener('pointerup', unlockAudio);
 canvas.addEventListener('pointerdown', e => {
-  audio.unlock();
-  if (portrait) return;
-  if (state.phase === 'title') { startGame(); return; }
+  if (portrait) { unlockAudio(); return; }
+  if (state.phase === 'title') { audio.unlock(true); startGame(); return; }
+  unlockAudio();
   if (paused) {
+    input.consumePause();
     const y = (e.clientY - offY) / scale;
     if (y > H / 2 + 70) audio.toggleMusic(); else setPaused(false);
     return;
   }
-  if ((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) { state.phase = 'title'; audio.stopMusic(); }
+  if ((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) { state.phase = 'title'; world.best = loadBest(); audio.stopMusic(); }
 });
 window.addEventListener('keydown', e => {
-  audio.unlock();
+  unlockAudio();
   if (e.code === 'KeyM') audio.toggleMusic();
   if (state.phase === 'title' && (e.code === 'Space' || e.code === 'Enter')) { startGame(); return; }
-  if (paused && (e.code === 'Space' || e.code === 'Enter')) setPaused(false);
-  if (((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) && e.code === 'Enter') { state.phase = 'title'; audio.stopMusic(); }
+  if (paused && (e.code === 'Space' || e.code === 'Enter')) { input.consumePause(); setPaused(false); }
+  if (((state.phase === 'over' && phaseTimer < 0.8) || (state.phase === 'win' && phaseTimer < 997)) && e.code === 'Enter') { state.phase = 'title'; world.best = loadBest(); audio.stopMusic(); }
 });
 
 // Title backdrop: an idle sector 1 scrolling behind the logo.
@@ -303,4 +307,4 @@ setInterval(() => { if (state.phase === 'title' && world) world.camX = (world.ca
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-window.__zoggon = { state, get world() { return world; }, input };
+window.__zoggon = { state, get world() { return world; }, input, audioState: () => audio.state };
